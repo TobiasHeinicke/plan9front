@@ -10,6 +10,18 @@ fn confignet{
 
 	# setup wifi encryption if any
 	if(~ $1 ether && test -x /bin/aux/wpa){
+		# If bssid is set in plan9.ini, set it provided that it appears in ifstats
+		# thus making sure that we only attempt to set it on wireless device
+		# [and desired WLAN in reach] - this way we have essid in next step.
+		# Note that we could have used essid instead,
+		# but the grepping of bssid is more foolproof
+		# (as it is more unlikely to appear as part of ifstats regularly -
+		# thus avoiding to have to parse more concrete).
+		if(! ~ $#bssid 0 && grep -s $bssid $2/ifstats >[2]/dev/null){
+			echo bssid $bssid >>$2/clone
+			sleep 1		# give a second to obtain essid from bssid ..
+		}
+
 		essid=`{grep '^essid: ' $2/ifstats >[2]/dev/null | sed 's/^essid: //; q'}
 		if(! ~ $#essid 0){
 			if(! ~ $#wpapsk 0 || grep -s '^status: need authentication' $2/ifstats >[2]/dev/null){
