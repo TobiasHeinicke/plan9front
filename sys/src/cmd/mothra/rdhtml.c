@@ -13,26 +13,25 @@ struct Fontdata{
 	Font *font;
 	int space;
 }fontlist[4][4]={
-/* original */
+	"lucidasans/unicode.6", 0, 0,
 	"lucidasans/unicode.7", 0, 0,
 	"lucidasans/unicode.8", 0, 0,
 	"lucidasans/unicode.10", 0, 0,
-	"lucidasans/unicode.13", 0, 0,
 
+	"lucidasans/italicunicode.6", 0, 0,
 	"lucidasans/italicunicode.7", 0, 0,
 	"lucidasans/italicunicode.8", 0, 0,
 	"lucidasans/italicunicode.10", 0, 0,
-	"lucidasans/italicunicode.13", 0, 0,
 
+	"lucidasans/boldunicode.6", 0, 0,
 	"lucidasans/boldunicode.7", 0, 0,
 	"lucidasans/boldunicode.8", 0, 0,
 	"lucidasans/boldunicode.10", 0, 0,
-	"lucidasans/boldunicode.13", 0, 0,
 
-	"lucidasans/typeunicode.7", 0, 0,
+	"lucidasans/typeunicode.6", 0, 0,
 	"pelm/unicode.8", 0, 0,
-	"lucidasans/typeunicode.12", 0, 0,
-	"lucidasans/typeunicode.16", 0, 0,
+	"lucidasans/typeunicode.7", 0, 0,
+	"lucidasans/typeunicode.9", 0, 0,
 };
 
 static struct{
