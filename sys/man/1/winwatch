@@ -9,6 +9,8 @@ winwatch \- monitor rio windows
 ] [
 .B -f
 .I font
+] [
+.B -S
 ]
 .SH DESCRIPTION
 .I Winwatch
@@ -32,6 +34,12 @@ is given,
 windows matching the regular expression
 .I exclude
 are not shown.
+.PP
+If the
+.B -S
+flag
+is given,
+window ids are shown.
 .SH EXAMPLE
 Excluding winwatch, stats and faces from being showed.
 .IP

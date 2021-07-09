@@ -34,6 +34,8 @@ enum {
 	MARGIN = 5
 };
 
+int showids = 0;
+
 void*
 erealloc(void *v, ulong n)
 {
@@ -174,10 +176,20 @@ drawnowin(int i)
 void
 drawwin(int i)
 {
+	char buf[256];
+	if(showids) {
+		snprint(buf, sizeof buf, "%d: %s", win[i].n, win[i].label);
+	}
 	draw(screen, win[i].r, statecol[win[i].state], nil, ZP);
-	_string(screen, addpt(win[i].r.min, Pt(2,0)), display->black, ZP,
-		font, win[i].label, nil, strlen(win[i].label), 
-		win[i].r, nil, ZP, SoverD);
+	if(!showids) {
+		_string(screen, addpt(win[i].r.min, Pt(2,0)), display->black, ZP,
+			font, win[i].label, nil, strlen(win[i].label), 
+			win[i].r, nil, ZP, SoverD);
+	} else {
+		_string(screen, addpt(win[i].r.min, Pt(2,0)), display->black, ZP,
+			font, buf, nil, strlen(buf), 
+			win[i].r, nil, ZP, SoverD);
+	}
 	border(screen, win[i].r, 1, display->black, ZP);	
 	win[i].dirty = 0;
 }
@@ -322,6 +334,9 @@ main(int argc, char **argv)
 	int i;
 
 	ARGBEGIN{
+	case 'S':
+		showids++;
+		break;
 	case 'f':
 		fontname = EARGF(usage());
 		break;
