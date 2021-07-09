@@ -112,7 +112,7 @@ threadmain(int argc, char *argv[])
 		exits("font open");
 	}
 	if(fontnames[1] == nil)
-		fontnames[1] = fontnames[0];
+		fontnames[1] = "/lib/font/bit/vga/unicode.font";
 	fontnames[0] = estrdup(fontnames[0]);
 	fontnames[1] = estrdup(fontnames[1]);
 
