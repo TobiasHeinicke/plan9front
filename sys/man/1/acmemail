@@ -1,4 +1,4 @@
-.TH NAIL 1
+.TH ACMEMAIL 1
 .SH NAME
 Mail \- view mail in acme
 
@@ -6,7 +6,7 @@ Mail \- view mail in acme
 
 Mail
 [
-.B -OsT
+.B -TOs
 ]
 [
 .B -m
@@ -19,6 +19,12 @@ Mail
 [
 .B -o
 .I outbox
+]
+[
+.B -p
+]
+[
+.I mbox
 ]
 
 .SH DESCRIPTION
@@ -64,6 +70,13 @@ Define the format of individual messages in the list view
 Save a copy of outgoing messages to the mailbox
 .IR outbox ,
 instead of discarding them after they're enqueued.
+.TP
+.BI -p
+Indicates that mbox is a path to a new mailbox.
+An absolute path is passed to upasfs(4),
+relative path is first interpreted using fd2path(2).
+If no path is given, "." is used.
+Mailbox is closed upon exit.
 
 .PP
 Mail presents and acme interface for a upas/fs mailbox.

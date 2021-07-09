@@ -28,12 +28,14 @@ char	*maildir	= "/mail/fs";
 char	*mailbox	= "mbox";
 char	*savebox	= "outgoing";
 char	*listfmt	= "%>48s\t<%f>";
+char *path	= ".";
 Mesg	dead = {.messageid="", .hash=42};
 
 Reprog	*mesgpat;
 
 int	threadsort = 1;
 int	sender;
+int	ispath;
 
 int	plumbsendfd;
 int	plumbseemailfd;
@@ -671,16 +673,25 @@ relinkmsg(Mesg *p, Mesg *m)
 	}
 }
 
-static void
-mbflush(char **, int)
+static int
+openctlfile(void)
 {
-	int i, j, ln, fd;
+	int fd;
 	char *path;
-	Mesg *m, *p;
 
 	path = estrjoin(maildir, "/ctl", nil);
 	fd = open(path, OWRITE);
 	free(path);
+	return fd;
+}
+
+static void
+mbflush(char **, int)
+{
+	int i, j, ln, fd;
+	Mesg *m, *p;
+
+	fd = openctlfile();
 	if(fd == -1)
 		sysfatal("open mbox: %r");
 	for(i = 0; i < mbox.nmesg; i++){
@@ -980,8 +991,94 @@ mbmain(void *cmd)
 static void
 usage(void)
 {
-	fprint(2, "usage: %s [-T] [-m mailfs] [-s] [-f format] [mbox]\n", argv0);
+	fprint(2, "usage: %s [-TOs] [-m maildir] [-f format] [-o outbox] [-p] [mbox]\n", argv0);
 	exits("usage");
+}
+
+static char*
+basename(char *path)
+{
+	char *base;
+	base = strrchr(path, '/');
+	if(base == nil)
+		base = path;
+	return base+1;
+}
+
+static char*
+absmboxpath(char *path)
+{
+	char *abspath;
+	char buf[512];
+	int fd, i;
+
+	/* If path is already absolute leave it mostly alone
+	(to allow opening another imap/pop directory),
+	otherwise get absolute path from relative one. */
+	if(*path == '/'){
+		i = strlen(path);
+		while(i > 0 && path[--i] == '/')
+			path[i] = '\0';
+		abspath = estrdup(path);
+	}else{
+		fd = open(path, OREAD);
+		if(fd < 0)
+			sysfatal("can't open %s: %r", path);
+	
+		if(fd2path(fd, buf, sizeof buf) != 0)
+			sysfatal("fd2path %s: %r", path);
+		close(fd);
+		abspath = estrdup(buf);
+	}
+
+	return abspath;
+}
+
+static void
+openmbox(char *path)
+{
+	int fd, i;
+	char err[ERRMAX];
+	char *name, *fsname, *abspath;
+
+	abspath = absmboxpath(path);
+	name = basename(abspath);
+
+	fd = openctlfile();
+	if(fd == -1)
+		sysfatal("open mbox: %r");
+
+	/* if mboxname is already taken try mboxname-0, ..., mboxname-9 */
+	fsname = estrdup(name);
+	for(i=0; i<10; i++){
+		if(fprint(fd, "open %s %s", abspath, fsname) >= 0)
+			break;
+		err[0] = '\0';
+		errstr(err, sizeof err);
+		if(strstr(err, "mbox name in use") == nil)
+			sysfatal("can't create directory %s for mail: %s", name, err);
+		free(fsname);
+		fsname = smprint("%s-%d", name, i);
+	}
+	if(i == 10)
+		sysfatal("can't open %s: %r", abspath);
+
+	mailbox = fsname;
+	free(abspath);
+	close(fd);
+}
+
+static void
+closembox(void)
+{
+	int fd;
+
+	fd = openctlfile();
+	if(fd == -1)
+		return;
+
+	fprint(fd, "close %s", mailbox);
+	close(fd);
 }
 
 void
@@ -1022,6 +1119,9 @@ threadmain(int argc, char **argv)
 	case 'o':
 		savebox = EARGF(usage());
 		break;
+	case 'p':
+		ispath++;
+		break;
 	default:
 		usage();
 		break;
@@ -1029,8 +1129,20 @@ threadmain(int argc, char **argv)
 
 	if(argc > 1)
 		usage();
-	if(argc == 1)
-		mailbox = argv[0];
+	if(argc == 1) {
+		if(!ispath)
+			mailbox = argv[0];
+		else
+			path = argv[0];
+	}
+
+	if(ispath) {
+		openmbox(path);
+		if(atexit(closembox) == 0) {
+			closembox();
+			sysfatal("atexit: %r");
+		}
+	}
 
 	mesgpat = regcomp("([0-9]+)(/.*)?");
 	cwait = threadwaitchan();
