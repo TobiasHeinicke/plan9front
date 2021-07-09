@@ -102,8 +102,8 @@ reads a value into the variable
 and returns 0 at EOF;
 the statement
 .B print
-prints a list of expressions that may include
-string constants such as
+prints a list of expressions (unparenthesized, comma-separated)
+that may include string constants such as
 \fL"hello\en"\f1.\fP
 .PP
 Control flow statements are
