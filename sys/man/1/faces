@@ -4,7 +4,7 @@ faces, seemail, vwhois \-  mailbox interface
 .SH SYNOPSIS
 .B faces
 [
-.B -ihc
+.B -iuhc
 ] [
 .B -m
 .I maildir
@@ -36,7 +36,7 @@ reacts to plumb messages to the
 port,
 typically from
 .BR upas/fs ,
-and is thus notified of message additions and deletions.
+and is thus notified of message additions, modifications and deletions.
 .PP
 Right-clicking on a message icon causes that message to be `plumbed' to
 .BR showmail .
@@ -73,6 +73,14 @@ to read the messages in
 .B -m
 flag —
 upon startup.
+.PP
+The
+.B -u
+option directs
+.I faces to show message icons only
+for messages with read flag not set.
+Causes icons to also be removed
+when messages are modified.
 .PP
 The
 .B -m
@@ -128,3 +136,13 @@ without sending a message.
 .IR plumber (4),
 .IR face (6),
 .IR plumb (6)
+.SH BUGS
+The
+.B -u
+option honors reading mail from
+multiple imap connections poorly.
+For example read flags on 'new' messages
+are not checked, thus a face for read mail
+may be shown if someone reads their mail
+very fast on another imap connection
+(which is not a upas/fs talking to the known plumber(4)).

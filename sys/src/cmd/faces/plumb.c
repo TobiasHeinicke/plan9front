@@ -121,7 +121,7 @@ parsedate(char *s)
 }
 
 Face*
-nextface(void)
+nextface(int unreadonly)
 {
 	int i;
 	Face *f;
@@ -135,8 +135,17 @@ nextface(void)
 		if(m == nil)
 			killall("error on seemail plumb port");
 		t = value(m->attr, "mailtype", "");
-		if(strcmp(t, "modify") == 0)
-			goto Ignore;
+		if(strcmp(t, "modify") == 0) {
+			/* Assume that receiving a modify for message implies that message was read,
+			 * because changed flags on a message still not having been read is a corner case
+			 * which does not justify overhead of message lookup and reading flag changes.
+			 */
+			if(unreadonly != 0) {
+				delete(m->data, value(m->attr, "digest", nil));
+			} else {
+				goto Ignore;
+			}
+		}
 		else if(strcmp(t, "delete") == 0)
 			delete(m->data, value(m->attr, "digest", nil));
 		else if(strcmp(t, "new") == 0)
@@ -186,12 +195,13 @@ iline(char *data, char **pp)
 }
 
 Face*
-dirface(char *dir, char *num)
+dirface(char *dir, char *num, int unreadonly)
 {
 	Face *f;
 	char *from, *date;
 	char buf[1024], pwd[1024], *info, *p, *digest;
-	int n, fd;
+	char readflag;
+	int n, fd, i, u;
 	ulong len;
 
 	/*
@@ -217,6 +227,23 @@ dirface(char *dir, char *num)
 		return nil;
 	}
 	info[n] = '\0';
+
+	/* if unreadonly set, return nil for read message */
+	if(unreadonly != 0) {
+		/* seek to flags */
+		u = n;
+		for(i = 0; i < 3; i++) {
+			while(u > 0 && info[--u] != '\n')
+				;
+		}
+		if(u > 2) {
+			readflag = info[u-2];
+			if(readflag == 's') {
+				return nil;
+			}
+		}
+	}
+	
 	f = emalloc(sizeof(Face));
 	from = iline(info, &p);	/* from */
 	iline(p, &p);	/* to */

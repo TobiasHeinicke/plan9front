@@ -46,7 +46,7 @@ extern char	*maildir;
 extern char	**maildirs;
 extern int	nmaildirs;
 
-Face*	nextface(void);
+Face*	nextface(int);
 void	findbit(Face*);
 void	freeface(Face*);
 void	initplumb(void);
@@ -54,7 +54,7 @@ void	killall(char*);
 void	showmail(Face*);
 void	delete(char*, char*);
 void	freefacefile(Facefile*);
-Face*	dirface(char*, char*);
+Face*	dirface(char*, char*, int);
 void	resized(void);
 int	alreadyseen(char*);
 ulong	dirlen(char*);

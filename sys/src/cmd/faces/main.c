@@ -9,6 +9,7 @@
 
 int	history = 0;	/* use old interface, showing history of mailbox rather than current state */
 int	initload = 0;	/* initialize program with contents of mail box */
+int	unreadonly = 0;	/* show face only for messages with read flag not set */
 int	clickrm = 0;	/* allows removing mail faces by left clicking */
 
 enum
@@ -359,18 +360,22 @@ addface(Face *f)	/* always adds at 0 */
 }
 
 void
-loadmboxfaces(char *maildir)
+loadmboxfaces(char *maildir, int unreadonly)
 {
 	int dirfd;
 	Dir *d;
+	Face *f;
 	int i, n;
 
 	dirfd = open(maildir, OREAD);
 	if(dirfd >= 0){
 		chdir(maildir);
 		while((n = dirread(dirfd, &d)) > 0){
-			for(i=0; i<n; i++)
-				addface(dirface(maildir, d[i].name));
+			for(i=0; i<n; i++) {
+				f = dirface(maildir, d[i].name, unreadonly);
+				if(f != nil)
+					addface(f);
+			}
 			free(d);
 		}
 		close(dirfd);
@@ -476,7 +481,7 @@ void
 faceproc(void)
 {
 	for(;;)
-		addface(nextface());
+		addface(nextface(unreadonly));
 }
 
 void
@@ -616,6 +621,11 @@ click(int button, Mouse *m)
 		for(i=first; i<last; i++)
 			if(ptinrect(p, facerect(i-first))){
 				showmail(faces[i]);
+				/* assuming that mail gets read, we now remove face if unreadonly set */
+				if(unreadonly != 0) {
+					delface(i);
+					flushimage(display, 1);
+				}
 				break;
 			}
 		unlockdisplay(display);
@@ -692,6 +702,9 @@ main(int argc, char *argv[])
 	case 'i':
 		initload++;
 		break;
+	case 'u':
+		unreadonly++;
+		break;
 	case 'm':
 		addmaildir(EARGF(usage()));
 		maildir = nil;
@@ -720,7 +733,7 @@ main(int argc, char *argv[])
 	startproc(mouseproc, Mousep);
 	if(initload)
 		for(i = 0; i < nmaildirs; i++)
-		 loadmboxfaces(maildirs[i]);
+		 loadmboxfaces(maildirs[i], unreadonly);
 	faceproc();
 	fprint(2, "faces: %s process exits\n", procnames[Mainp]);
 	killall(nil);
