@@ -529,6 +529,7 @@ wormcopy(void *)
 	int f, dorecalc = 1;
 	Timet dt, t = 0, nddate = 0, ntoytime = 0;
 	Filsys *fs;
+	Tm* tm;
 
 	for (;;) {
 		if (dorecalc) {
@@ -547,7 +548,8 @@ wormcopy(void *)
 		if(t > ntoytime)
 			ntoytime = time(nil) + HOUR(1);
 		else if(t > nddate) {
-			if(!conf.nodump) {
+			tm = gmtime(t);	/* to sanity check that we have not lost track of time */
+			if(!conf.nodump && tm->year != 70) {
 				fprint(2, "automatic dump %T\n", t);
 				for(fs=filsys; fs->name; fs++)
 					if(fs->dev->type == Devcw)
