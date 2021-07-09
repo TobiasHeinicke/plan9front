@@ -167,18 +167,17 @@ loop:
 		increment(s, c);
 		goto loop;
 	}
-//	if(flags['2'])
-//		if(s->match)
-//			print("%d: %.2x**\n", s, c);
-//		else
-//			print("%d: %.2x\n", s, c);
 	lp++;
 	s = ns;
 	if(c == '\n') {
 		lineno++;
 		if(!!s->match == !(flag&Vflag)) {
+			/* only interested in status, no need to read further */
+			if(flag & Sflag)
+				return 1;
+
 			count++;
-			if(flag & (Cflag|Sflag|Llflag|LLflag))
+			if(flag & (Cflag|Llflag|LLflag))
 				goto cont;
 			if(flag & Hflag)
 				Bprint(&bout, "%s:", file);
@@ -216,8 +215,12 @@ loopi:
 	if(c == '\n') {
 		lineno++;
 		if(!!s->match == !(flag&Vflag)) {
+			/* only interested in status, no need to read further */
+			if(flag & Sflag)
+				return 1;
+
 			count++;
-			if(flag & (Cflag|Sflag|Llflag|LLflag))
+			if(flag & (Cflag|Llflag|LLflag))
 				goto conti;
 			if(flag & Hflag)
 				Bprint(&bout, "%s:", file);
