@@ -160,6 +160,9 @@ The markers appear along the right, and the markers
 show values appropriate to the rightmost machine; this only
 matters for graphs such as memory that have machine-specific
 maxima.
+.TP
+.B -H
+Hide the machine names (hostnames).
 .PD
 .SH FILES
 .B /net/ether0/0/stats

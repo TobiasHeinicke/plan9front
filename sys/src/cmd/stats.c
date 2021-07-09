@@ -219,6 +219,7 @@ int	ngraph;	/* totaly number is ngraph*nmach */
 double	scale = 1.0;
 int	logscale = 0;
 int	ylabels = 0;
+int	hidemachines = 0;
 int	sleeptime = 1000;
 int	batteryperiod = 1000;
 int	tempperiod = 1000;
@@ -1110,7 +1111,7 @@ resize(void)
 
 	/* label left edge */
 	x = screen->r.min.x;
-	y = screen->r.min.y + Labspace+font->height+Labspace;
+	y = screen->r.min.y + (hidemachines ? 0 : Labspace+font->height+Labspace);
 	dy = (screen->r.max.y - y)/ngraph;
 	dx = Labspace+stringwidth(font, "0")+Labspace;
 	startx = x+dx+1;
@@ -1124,18 +1125,21 @@ resize(void)
 
 	/* label top edge */
 	dx = (screen->r.max.x - startx)/nmach;
-	for(x=startx, i=0; i<nmach; i++,x+=dx){
-		draw(screen, Rect(x-1, starty-1, x, screen->r.max.y), display->black, nil, ZP);
-		j = dx/stringwidth(font, "0");
-		n = mach[i].nproc;
-		if(n>1 && j>=1+3+mach[i].lgproc){	/* first char of name + (n) */
-			j -= 3+mach[i].lgproc;
-			if(j <= 0)
-				j = 1;
-			snprint(buf, sizeof buf, "%.*s(%d)", j, mach[i].shortname, n);
-		}else
-			snprint(buf, sizeof buf, "%.*s", j, mach[i].shortname);
-		string(screen, Pt(x+Labspace, screen->r.min.y + Labspace), display->black, ZP, font, buf);
+
+	if(!hidemachines) {
+		for(x=startx, i=0; i<nmach; i++,x+=dx){
+			draw(screen, Rect(x-1, starty-1, x, screen->r.max.y), display->black, nil, ZP);
+			j = dx/stringwidth(font, "0");
+			n = mach[i].nproc;
+			if(n>1 && j>=1+3+mach[i].lgproc){	/* first char of name + (n) */
+				j -= 3+mach[i].lgproc;
+				if(j <= 0)
+					j = 1;
+				snprint(buf, sizeof buf, "%.*s(%d)", j, mach[i].shortname, n);
+			}else
+				snprint(buf, sizeof buf, "%.*s", j, mach[i].shortname);
+			string(screen, Pt(x+Labspace, screen->r.min.y + Labspace), display->black, ZP, font, buf);
+		}
 	}
 
 	maxx = screen->r.max.x;
@@ -1306,6 +1310,9 @@ main(int argc, char *argv[])
 		break;
 	case 'Y':
 		ylabels++;
+		break;
+	case 'H':
+		hidemachines++;
 		break;
 	case 'O':
 		break;
