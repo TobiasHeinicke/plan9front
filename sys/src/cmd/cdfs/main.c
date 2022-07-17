@@ -6,6 +6,9 @@
 #include <thread.h>
 #include <9p.h>
 #include <disk.h>
+#include <stdio.h>
+#include <mp.h>
+#include <libsec.h>
 #include "dat.h"
 #include "fns.h"
 
@@ -314,7 +317,7 @@ cddb_sum(int n)
 }
 
 static ulong
-diskid(Drive *d)
+cddb_diskid(Drive *d)
 {
 	int i, n;
 	ulong tmp;
@@ -335,14 +338,78 @@ diskid(Drive *d)
 	return ((n % 0xFF) << 24 | (tmp << 8) | d->ntrack);
 }
 
+/* compared to RFC 4648 characters . _ - are used instead of + / = */
+uchar*
+musicbrainz_base64(uchar* src, int size) {
+	uchar tab[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._";
+	uchar pad = '-';
+	uchar* result = emalloc((size / 3) * 4 + 1 + ((size % 3) == 0 ? 0 : 4));
+	int i, u;
+
+	for(i = 0, u = 0; i < (size / 3) * 4; i+=4, u+=3) {
+		result[i] = tab[src[u] >> 2];
+		result[i+1] = tab[((src[u] & 0x3) << 4) | (src[u+1] >> 4)];
+		result[i+2] = tab[((src[u+1] & 0xF) << 2) | (src[u+2] >> 6)];
+		result[i+3] = tab[src[u+2] & 0x3F];
+	}
+	if(size % 3 != 0) {
+		result[i] = tab[src[u] >> 2];
+		if(size % 3 == 1) {
+			result[i+1] = tab[((src[u] & 0x3) << 4)];
+			result[i+2] = pad;
+		} else {
+			result[i+1] = tab[((src[u] & 0x3) << 4) | (src[u+1] >> 4)];
+			result[i+2] = tab[((src[u+1] & 0xF) << 2)];
+		}
+		result[i+3] = pad;
+		i = i + 4;
+	}
+	result[i] = '\0';
+
+	return result;
+}
+
+static uchar*
+musicbrainz_diskid(Drive *d)
+{
+	uchar digest[SHA1dlen];
+	DigestState *s;
+	char buf[9];
+	Msf* m;
+	int i;
+
+	sprintf(buf, "%02X", d->firsttrack);
+	s = sha1((uchar*)buf, strlen(buf), nil, nil);
+	sprintf(buf, "%02X", d->ntrack + d->firsttrack - 1);
+	sha1((uchar*)buf, strlen(buf), nil, s);
+
+	m = &d->track[d->ntrack - 1].mend;
+	sprintf(buf, "%08X", (m->m*60 + m->s)*75 + m->f);
+	sha1((uchar*)buf, strlen(buf), nil, s);
+
+	for(i=0; i < d->ntrack; i++) {
+		m = &d->track[i].mbeg;
+		sprintf(buf, "%08X", (m->m*60 + m->s)*75 + m->f);
+		sha1((uchar*)buf, strlen(buf), nil, s);
+	}
+	sprintf(buf, "%08X", 0);
+	for(i=d->ntrack; i < 98; i++) {
+		sha1((uchar*)buf, strlen(buf), nil, s);
+	}
+	sha1((uchar*)buf, strlen(buf), digest, s);
+
+	return musicbrainz_base64(digest, sizeof(digest));
+}
+
 static void
 readctl(Req *r)
 {
 	int i, isaudio;
 	ulong nwa;
 	char *p, *e, *ty;
-	char s[1024];
+	char s[2048];
 	Msf *m;
+	char *mbdiscid;
 
 	isaudio = 0;
 	for(i=0; i<drive->ntrack; i++)
@@ -353,7 +420,7 @@ readctl(Req *r)
 	e = s + sizeof s;
 	*p = '\0';
 	if(isaudio){
-		p = seprint(p, e, "aux/cddb query %8.8lux %d", diskid(drive),
+		p = seprint(p, e, "aux/cddb query %8.8lux %d", cddb_diskid(drive),
 			drive->ntrack);
 		for(i=0; i<drive->ntrack; i++){
 			m = &drive->track[i].mbeg;
@@ -361,6 +428,11 @@ readctl(Req *r)
 		}
 		m = &drive->track[drive->ntrack].mbeg;
 		p = seprint(p, e, " %d\n", m->m*60 + m->s);
+		mbdiscid = (char*)musicbrainz_diskid(drive);
+		if(mbdiscid) {
+			p = seprint(p, e, "musicbrainz disc id %s\n", mbdiscid);
+			free(mbdiscid);
+		}
 	}
 
 	if(drive->readspeed == drive->writespeed)
